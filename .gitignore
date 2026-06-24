@@ -2,3 +2,6 @@
 config.ini
 # 本地说明文档（不提交到仓库）
 CLAUDE.md
+# Python 缓存
+__pycache__/
+*.pyc
