@@ -95,7 +95,11 @@ def _parse_gwt(text):
 
 
 def _extract_stock(strings):
-    """从 GWT 字符串表提取 (shanghai, japan)。"""
+    """从 GWT 字符串表提取 (shanghai, japan)。
+
+    库存值在字符串表中是头两个数值（不含 DTO 类型标记的第4位起）。
+    中间可能穿插 Boolean/Long 等类型标记，不能用固定偏移。
+    """
 
     def clean(s):
         try:
@@ -106,20 +110,9 @@ def _extract_stock(strings):
     def is_stock(s):
         return bool(s) and bool(re.match(r"^-?\d+(\.\d+)?$", s)) and 0 <= float(s) < 999999
 
-    def is_whole(s):
-        return float(s) == int(float(s))
-
-    shanghai = japan = cdc = 0
-
-    if len(strings) > 5 and is_stock(strings[4]) and is_stock(strings[5]):
-        shanghai, japan = clean(strings[4]), clean(strings[5])
-    elif len(strings) > 15 and is_stock(strings[15]):
-        shanghai = clean(strings[15])
-
-    if len(strings) > 16 and is_stock(strings[16]) and is_whole(strings[16]):
-        cdc = clean(strings[16])
-
-    return shanghai + cdc, japan
+    # 从 index 4 开始扫描，跳过类型标记，取前两个数值
+    vals = [clean(s) for s in strings[4:] if is_stock(s)]
+    return (vals[0], vals[1]) if len(vals) >= 2 else (vals[0] if vals else 0, 0)
 
 
 class QueryEngine:
