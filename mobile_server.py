@@ -97,8 +97,9 @@ def _parse_gwt(text):
 def _extract_stock(strings):
     """从 GWT 字符串表提取 (shanghai, japan)。
 
-    库存值在字符串表中是头两个数值（不含 DTO 类型标记的第4位起）。
-    中间可能穿插 Boolean/Long 等类型标记，不能用固定偏移。
+    库存值在字符串表中是 index 4 开始的头两个数值。
+    中间可能穿插 Boolean/Long 等类型标记，需要用动态扫描。
+    -1 是 GWT 表示"无库存"的标准值，视为合法库存信号。
     """
 
     def clean(s):
@@ -108,7 +109,19 @@ def _extract_stock(strings):
             return 0
 
     def is_stock(s):
-        return bool(s) and bool(re.match(r"^-?\d+(\.\d+)?$", s)) and 0 <= float(s) < 999999
+        """库存值必须是纯数字字符串，且不在 999999 以上（价格/汇率等干扰项）。
+        -1 是 GWT 表示"无库存"的合法值，需要保留。
+        """
+        if not s:
+            return False
+        if not re.match(r"^-?\d+(\.\d+)?$", s):
+            return False
+        v = float(s)
+        # -1 表示无库存，合法
+        if v == -1:
+            return True
+        # 其他值必须在合理库存范围内（排除价格、汇率、日期等）
+        return 0 <= v < 999999
 
     # 从 index 4 开始扫描，跳过类型标记，取前两个数值
     vals = [clean(s) for s in strings[4:] if is_stock(s)]
